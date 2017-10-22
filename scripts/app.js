@@ -19,25 +19,27 @@ var grass_movement = 34;
 
 var seed = Math.random();
 var pn = new Perlin(seed);
-var a = get_perlin(height, width ,blocksize, pn, 0)
+var a = get_perlin(height, width ,blocksize, pn, 0);
 
 
+// Define elements
 
+// clouds
 var Clouds = function( width, height, blocksize, threshold) {
   this.width = width;
   this.height = height;
   this.blocksize = blocksize;
   this.threshold = threshold;
-  this.clouds = []
+  this.clouds = [];
 }
 
 Clouds.prototype.initialize = function(){
-  var shapes = []
-  for (var i=-1; i < this.width/this.blocksize ; i++) {
+  var shapes = [];
+  for (var i = -1; i < this.width/this.blocksize ; i++) {
     var row = [];
-    for (var ii=-1; ii < this.height/this.blocksize ; ii++) {
-      var rect = new Rectangle( [i * this.blocksize, ii * this.blocksize], [this.blocksize * 2,this.blocksize * 2]);
-      var path = new Path.Rectangle(rect, blocksize/4);
+    for (var ii = -1; ii < this.height/this.blocksize ; ii++) {
+      var rect = new Rectangle( [i * this.blocksize, ii * this.blocksize], [this.blocksize * 2, this.blocksize * 2]);
+      var path = new Path.Rectangle(rect, this.blocksize/4);
       row.push(path);
     }
     shapes.push(row);
@@ -58,7 +60,7 @@ Clouds.prototype.run = function(a){
   }
 }
 
-
+// grass
 var Grass = function(base, height, width, color, displacement) {
   this.base = base;
   this.bladeheight = height;
@@ -66,40 +68,41 @@ var Grass = function(base, height, width, color, displacement) {
   this.bladecolor = color;
   this.displacement = displacement;
   this.tip = new Point(base.x + ((Math.random() - 0.5) * 120), base.y - this.bladeheight);
-
-
   spine = new Path.Line(this.base, this.tip);
   this.spine = midline_displacement(spine, 1, this.displacement);
   this.path = fatten_line(this.spine,  this.bladewidth , 'point');
-  this.spine.smooth({ type: 'continuous'})
-  this.moves = []
+  this.spine.smooth({ type: 'continuous'});
+  this.moves = [];
   for (var i = 0; i < this.spine.segments.length; i++) {
-    this.moves.push( new Point(0,0) )
+    this.moves.push( new Point(0,0) );
   }
-  this.styling_init()
+  this.styling_init();
 }
 
 Grass.prototype.styling_init = function(){
   // draw stuff
   this.spine.strokeWidth = 12;
   this.path.fillColor = this.bladecolor;
-  this.path.strokeColor = {hue: this.bladecolor.hue, saturation: 0.5, brightness: 0.4}
-  // this.path.opacity = 0.9
-  this.path.strokeWidth = 1.5
+  this.path.strokeColor = {
+    hue: this.bladecolor.hue,
+    saturation: 0.5,
+    brightness: 0.4
+  };
+  this.path.strokeWidth = 1.5;
 
 }
 
 Grass.prototype.sway = function(amount) {
   for (var i = 1; i < this.moves.length; i++) {
     // 'collect' sway moving from bottom to top
-    direction = (this.spine.segments[i-1].point - this.spine.segments[i].point).angle + 90;
-    sway = (0.5 - Math.random()) * amount;
-    vector = new Point({length: sway, angle: direction})
+    var direction = (this.spine.segments[i-1].point - this.spine.segments[i].point).angle + 90;
+    var sway = (0.5 - Math.random()) * amount;
+    var vector = new Point({length: sway, angle: direction});
     if (Math.random() > 0.5) {
       vector *= -1;
     }
     for (var ii = i; ii < this.spine.segments.length; ii++) {
-      this.moves[ii] += vector/4
+      this.moves[ii] += vector/4;
       this.moves[ii] *= 4/5;
     }
   }
@@ -107,7 +110,7 @@ Grass.prototype.sway = function(amount) {
     this.spine.segments[i].point += this.moves[i];
     this.path.segments[i].point += this.moves[i];
     if (i != this.moves.length - 1) {
-      this.path.segments[ (this.moves.length * 2) - i - 2].point += this.moves[i]
+      this.path.segments[ (this.moves.length * 2) - i - 2].point += this.moves[i];
     }
   }
 }
@@ -116,12 +119,10 @@ var Stalk = function() {
 
 }
 
-
-
+// INITIALISING STUFF
 
 var clouds = new Clouds(width, height, blocksize, threshold);
-clouds.initialize()
-
+clouds.initialize();
 
 grasses = [];
 
@@ -140,16 +141,13 @@ function onFrame(event) {
   if (n% cloudFrames == 0){
     a = get_perlin(width, height, blocksize, pn, n/1.7);
     clouds.run(a);
-    // console.log("run clouds")
   }
-  // canvas.style.webkitFilter = "blur(1px)";
-  for (var g = 0; g < grasses.length; g++) {
+  for ( var i = 0; i < grasses.length; i++) {
     if (Math.random() < grass_frame_chance) {
-      sway_amount = (Math.random() - 0.5)  * grass_movement
-      grasses[g].sway(sway_amount)
+      sway_amount = (Math.random() - 0.5)  * grass_movement;
+      grasses[i].sway(sway_amount);
     }
   }
-
   n += 1;
 }
 
@@ -160,47 +158,46 @@ function onFrame(event) {
 function get_perlin(width, height, blocksize, pn, offset) {
   // This function needs to be generalised
   // produces pseudo-harmonic perlin noise
-  a = []
+  a = [];
   for (var i = 0; i <= width / blocksize; i ++) {
     a[i] = [];
     for (var ii = 0; ii <= height / blocksize; ii ++) {
-      nn = pn.noise((i + offset/5)/20, (ii + offset/35)/20, offset/100) * 0.5
-      nn += pn.noise((i + offset/10)/20, (ii + offset/70)/20, offset/200) * 0.25
-      nn += pn.noise((i + offset/20)/20, (ii + offset/140)/20, offset/400) * 0.25
+      nn = pn.noise((i + offset/5)/20, (ii + offset/35)/20, offset/100) * 0.5;
+      nn += pn.noise((i + offset/10)/20, (ii + offset/70)/20, offset/200) * 0.25;
+      nn += pn.noise((i + offset/20)/20, (ii + offset/140)/20, offset/400) * 0.25;
       a[i][ii] = nn;
     }
   }
   return a;
 }
 
-
 // path/grass helpers
 function midline_displacement(path, repeat, displacement){
   new_path = path.clone();
-  for (var iii = 0; iii < path.segments.length - 1; iii++) {
-    midpoint = new Point((path.segments[iii].point + path.segments[iii+1].point)  / 2);
+  for (var i = 0; i < path.segments.length - 1; i++) {
+    midpoint = new Point((path.segments[i].point + path.segments[i + 1].point)  / 2);
     if (displacement > 0) {
-        distance = (path.segments[iii].point - path.segments[iii + 1].point).length
-        angle = (midpoint - path.segments[iii]).angle + 90;
-        offset = new Point({length: (Math.random() - 0.5) * displacement * distance, angle: angle})
-        midpoint += offset
+        distance = (path.segments[i].point - path.segments[i + 1].point).length;
+        angle = (midpoint - path.segments[i]).angle + 90;
+        offset = new Point({length: (Math.random() - 0.5) * displacement * distance, angle: angle});
+        midpoint += offset;
     }
-    new_path.insert((2 *iii)+1,midpoint)
+    // insert midpoint at *iii +1 to offset already isnerted segments
+    new_path.insert((2 * i) + 1, midpoint );
   }
   if (repeat > 1) {
-    repeat -= 1
-    return midline_displacement(new_path, repeat , displacement)
+    repeat -= 1;
+    return midline_displacement(new_path, repeat , displacement);
   }
-  return new_path
+  return new_path;
 }
 
 function fatten_line(path, width, type){
-
   up = [];
   down = [];
   for (var i = 0; i < path.segments.length - 1; i++) {
     var angle = (path.segments[i].point - path.segments[i + 1].point ).angle + 90;
-    vector = new Point({length: width/2, angle: angle})
+    var vector = new Point({length: width/2, angle: angle});
     up.push(new Point(path.segments[i].point + vector));
     down.push(new Point(path.segments[i].point - vector));
   }
@@ -212,11 +209,10 @@ function fatten_line(path, width, type){
   }
   down.reverse()
   path = new Path(up);
-  path.smooth({type: 'continuous'})
+  path.smooth({type: 'continuous'});
   down_path = new Path(down);
-  down_path.smooth({type: 'continuous'})
-  path.addSegments(down_path.segments)
-  path.closed = true
-  // console.log("LENGTH: " + path.segments.length)
-  return path
+  down_path.smooth({type: 'continuous'});
+  path.addSegments(down_path.segments);
+  path.closed = true;
+  return path;
 }
