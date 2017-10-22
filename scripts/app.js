@@ -154,12 +154,13 @@ Flower.prototype.run = function(target, amount) {
 
 Flower.prototype.grow = function(target, amount) {
   this.target = target;
-  var toTarget = target - this.spine.segments[this.spine.segments.length - 1].point;
+  var toTarget = (target - this.spine.lastSegment.point);
   if (toTarget.length <= 10) {
     this.growing = false;
     this.flowering = true;
   }
-  var new_point = this.spine.lastSegment.point + toTarget.normalize(amount);
+  var old_direction = (this.spine.lastSegment.point - this.spine.segments[this.spine.segments.length -2].point).normalize(amount * 0.75)
+  var new_point = this.spine.lastSegment.point + toTarget.normalize(amount * 0.25) + old_direction;
   this.spine.add(new_point);
   this.updatePath(1);
 }
@@ -169,12 +170,14 @@ Flower.prototype.updatePath = function(number_of_additions) {
   var spine_segs = this.spine.segments;
   this.path.segments[mid_seg] = this.spine.lastSegment;
   var angle = (spine_segs[spine_segs.length - 1].point - spine_segs[spine_segs.length - 2].point).angle + 90;
-  var vector = new Point({angle: angle, length: this.width});
+  var w = this.width *  (0.9 + Math.random() * 0.2);
+  var vector = new Point({angle: angle, length: w});
   p1 = spine_segs[spine_segs.length - 2].point + vector;
   console.log(p1)
   p2 = spine_segs[spine_segs.length - 2].point - vector;
   this.path.insert(mid_seg, p1);
   this.path.insert(mid_seg + 2, p2);
+  // this.path.simplify();
 }
 
 // INITIALISING STUFF
@@ -196,7 +199,7 @@ for (var i = 0; i < grass_number; i++) {
 // flowers
 target = new Point(width/2, 0);
 styleGenes = {
-  color: {hue: 120 + Math.random() * 20, saturation: 0.6, brightness: 0.8},
+  color: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
   width: 5
 }
 
