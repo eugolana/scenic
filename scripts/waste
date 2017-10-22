@@ -1,0 +1,89 @@
+// function update_shapes(map, clusters, n, threshold) {
+//   // console.log("updating shit")
+//   a = get_perlin(width, height, blocksize, pn, n);
+//   for (var i = 0; i < a.length; i++)  {
+//     for (var ii = 0; ii < a[i].length; ii++) {
+//       if (map[i][ii]  & a[i][ii] > threshold) {
+//         // identify which cluster
+//         ci = 0;
+//         var thisCluster;
+//         // console.log("perlin thing is " + a[i][ii])
+//         while (thisCluster == undefined && ci < clusters.length) {
+//           if (clusters[ci].contains([i * blocksize, ii * blocksize ])) {
+//             thisCluster = clusters[ci];
+//           }
+//           ci += 1;
+//         }
+//         if (thisCluster) {
+//           rect = new Rectangle([i * blocksize, ii * blocksize], [blocksize * 1.1, blocksize * 1.1])
+//           thisCluster.subtract(new Path.Rectangle(rect, 0))
+//           console.log("removing node at x: " + i +" y: " + ii);
+//         }
+//
+//       }
+//       if (!map[i][ii]  & a[i][ii] <= threshold) {
+//         // identify which cluster
+//         ci = 0;
+//         var thisCluster;
+//         rect = new Rectangle([i * blocksize, ii * blocksize], [blocksize * 1.1, blocksize * 1.1])
+//         rectPath = new Path.Rectangle(rect, 0)
+//         while (thisCluster == undefined && ci < clusters.length) {
+//           if (clusters[ci].intersects(rectPath)) {
+//             thisCluster = clusters[ci];
+//           }
+//           ci += 1
+//         }
+//         if (thisCluster) {
+//           thisCluster.unite(new Path.Rectangle(rect, 0))
+//           console.log("adding node at x: " + i +" y: " + ii);
+//         }
+//       }
+//       // update map
+//       map[i][ii] = a[i][ii] <= threshold
+//
+//     }
+//   }
+//   // console.log('he;p')
+//   return map;
+//
+// }
+
+
+//
+// var path = new Path();
+// // Give the stroke a color
+// path.strokeColor = 'black';
+// var start = new Point(100, 100);
+// // Move to start and draw a line from there
+// path.moveTo(start);
+// // Note the plus operator on Point objects.
+// // PaperScript does that for us, and much more!
+// path.lineTo(start + [ 100, -50 ]);
+// path.lineTo(start + [400,60]);
+
+
+// function draw_clouds(a, threshold) {
+//   var shapes = make_shapes(a, threshold);
+//   // console.log(map)
+//   clusters = []
+//
+//   leftover = shapes;
+//   while (leftover.length > 10) {
+//       cluster = leftover[0]
+//       new_leftover = []
+//       for (i = 1; i < leftover.length; i++) {
+//          if (cluster.intersects(leftover[i])) {
+//           //  console.log("interstection")
+//           //  console.log(cluster)
+//            cluster = cluster.unite(leftover[i])
+//          } else {
+//            new_leftover.push(leftover[i])
+//          }
+//
+//        }
+//        clusters.push(cluster);
+//        leftover = new_leftover;
+//        leftover.push(cluster)
+//    }
+//     return clusters
+// }
