@@ -9,7 +9,7 @@ var blocksize = 32;
 var threshold = 0.6;
 var cloudFrames = 1;
 
-var grass_number = 600;
+var grass_number = 340;
 var grass_min_height = 100
 var grass_max_height = 350;
 var grass_min_width = 3;
@@ -21,6 +21,10 @@ var seed = Math.random();
 var pn = new Perlin(seed);
 var a = get_perlin(height, width ,blocksize, pn, 0);
 
+var mousePoint = new Point(width/2, 0)
+onMouseMove = function(event) {
+  mousePoint = event.point
+}
 
 // Define elements
 
@@ -115,8 +119,62 @@ Grass.prototype.sway = function(amount) {
   }
 }
 
-var Stalk = function() {
+// Flower
+var Flower = function(target, styleGenes ) {
+  this.target = target;
+  // 'styleGenes' is a serialisable object representation of the flower characteristics
+  this.styleGenes = styleGenes;
+  this.width = this.styleGenes.width;
+  this.base = new Point(this.target.x, height + 20);
+  var second_point = new Point(this.target.x, height);
+  this.growing = true;
+  this.flowering = false;
+  this.time = 0;
+  this.length = 0;
+  this.spine = new Path([this.base, second_point]);
+  this.path = fatten_line(this.spine, this.width, 'point');
+  this.path.fillColor = this.styleGenes.color;
+  this.path.strokeColor = {
+    hue: this.styleGenes.color.hue,
+    saturation: 0.5,
+    brightness: 0.4
+  };
 
+}
+
+Flower.prototype.run = function(target, amount) {
+  if (this.growing) {
+    this.grow(target, amount)
+    return;
+  }
+  if (this.flowering) {
+//
+  }
+}
+
+Flower.prototype.grow = function(target, amount) {
+  this.target = target;
+  var toTarget = target - this.spine.segments[this.spine.segments.length - 1].point;
+  if (toTarget.length <= 10) {
+    this.growing = false;
+    this.flowering = true;
+  }
+  var new_point = this.spine.lastSegment.point + toTarget.normalize(amount);
+  this.spine.add(new_point);
+  this.updatePath(1);
+}
+
+Flower.prototype.updatePath = function(number_of_additions) {
+  var mid_seg = Math.floor(this.path.segments.length/2);
+  var spine_segs = this.spine.segments;
+  this.path.segments[mid_seg] = this.spine.lastSegment;
+  var angle = (spine_segs[spine_segs.length - 1].point - spine_segs[spine_segs.length - 2].point).angle + 90;
+  var vector = new Point({angle: angle, length: this.width});
+  p1 = spine_segs[spine_segs.length - 2].point + vector;
+  console.log(p1)
+  p2 = spine_segs[spine_segs.length - 2].point - vector;
+  this.path.insert(mid_seg, p1);
+  this.path.insert(mid_seg + 2, p2);
 }
 
 // INITIALISING STUFF
@@ -135,6 +193,20 @@ for (var i = 0; i < grass_number; i++) {
   grasses.push(new Grass(p, g_height, g_width, g_color, 0.2));
 }
 
+// flowers
+target = new Point(width/2, 0);
+styleGenes = {
+  color: {hue: 120 + Math.random() * 20, saturation: 0.6, brightness: 0.8},
+  width: 5
+}
+
+f = []
+view.onClick = function(event) {
+  f.push(new Flower( mousePoint, styleGenes))
+}
+
+
+// run loop
 n = 0;
 function onFrame(event) {
   // draw clouds eery <cloudFrames> frames
@@ -146,6 +218,11 @@ function onFrame(event) {
     if (Math.random() < grass_frame_chance) {
       sway_amount = (Math.random() - 0.5)  * grass_movement;
       grasses[i].sway(sway_amount);
+    }
+  }
+  for (var i = 0; i < f.length; i++) {
+    if (f[i].growing) {
+      f[i].run(mousePoint, 5)
     }
   }
   n += 1;
