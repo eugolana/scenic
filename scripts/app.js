@@ -191,13 +191,17 @@ Flower.prototype.growBud = function(amount) {
 Flower.prototype.growFlower = function(amount) {
   v = this.budPetals(this.sepals, this.styleGenes.flowerSize * 0.75, amount/4);
   if (v) {
-    this.petals.moveAbove(this.sepals)
+    this.petals.moveAbove(this.sepals);
+    this.flowerInner.moveAbove(this.sepals);
     this.budPetals(this.petals, this.styleGenes.flowerSize, amount/5);
   }
 }
 
 Flower.prototype.budPetals = function(petals, size, amount) {
   template_circle = Path.Circle(this.spine.lastSegment.point, size);
+  if (!template_circle.contains(petals.children[0].segments[0].point)) {
+    return true;
+  }
   length = template_circle.length/ 2 / petals.children.length;
   for (var i = 0; i < petals.children.length; i++) {
     petal = petals.children[i];
@@ -206,34 +210,44 @@ Flower.prototype.budPetals = function(petals, size, amount) {
     vector = target - petal.segments[0].point
     petal.segments[0].point += vector.normalize(amount)
   }
-
-  if (vector.length <= 2 * amount) {
-    return true;
-  }
+  //
+  // if (vector.length <= 2 * amount) {
+  //   return true;
+  // }
   return false;
 }
 
 Flower.prototype.createFlower = function() {
   this.flower = new Group();
   circle_template = new Path.Circle(this.spine.lastSegment.point, 4);
+  this.flowerInner = circle_template;
   circle_template.fillColor = this.styleGenes.innerColor;
   this.flower.addChild(circle_template)
   // draw petals
-  petals = this.drawPetals(circle_template, this.styleGenes.petals)
+  petals = this.drawPetals(circle_template, this.styleGenes.petals, 'rounded')
   this.petals = petals;
-  this.flower.addChild(petals);
-  petals.fillColor = this.styleGenes.petalColor
+  // round petals
+  for (var i = 0; i < petals.children.length; i++) {
+    petals.children[i].fillColor = randomiseColor(this.styleGenes.petalColor, 15, 0.2, 0.2)
+  }
   petals.strokeColor = {
     hue: this.styleGenes.petalColor,
     saturation: 0.4,
     brightness: 0.4
   }
+  this.flower.addChild(petals);
   // Draw sepals
-  sepals = this.drawPetals(circle_template, this.styleGenes.sepals)
+  sepals = this.drawPetals(circle_template, this.styleGenes.sepals, 'spikey')
   this.sepals = sepals;
+  for (var i = 0; i < sepals.children.length; i++) {
+    sepals.children[i].fillColor = randomiseColor(this.styleGenes.sepalColor, 15, 0.2, 0.2)
+  }
+  sepals.strokeColor = {
+    hue: this.styleGenes.sepalColor,
+    saturation: 0.4,
+    brightness: 0.4
+  }
   this.flower.addChild(sepals);
-  sepals.fillColor = this.styleGenes.sepalColor;
-  sepals.strokeColor = "#114411"
 
 
   //  draw petals
@@ -241,8 +255,9 @@ Flower.prototype.createFlower = function() {
 
 }
 
-Flower.prototype.drawPetals = function(circ, number) {
+Flower.prototype.drawPetals = function(circ, number, type) {
   length = circ.length/ (number * 2);
+  circ_radius = circ.bounds.width;
   petals = new Group();
 
   for (var i = 0; i < number; i++) {
@@ -254,6 +269,11 @@ Flower.prototype.drawPetals = function(circ, number) {
     arc.insert(0, this.spine.lastSegment.point);
     arc.closed = true;
     arc.smooth({type: 'catmull-rom'})
+    if (type=='rounded') {
+      vector = (p1 - p3)
+      arc.firstSegment.handleIn =   vector * -1
+      arc.firstSegment.handleOut =  vector
+    }
     petals.addChild(arc);
   }
   return petals
@@ -392,4 +412,14 @@ function fatten_line(path, width, type){
   path.addSegments(down_path.segments);
   path.closed = true;
   return path;
+}
+
+
+function randomiseColor(color, r_h, r_s, r_b){
+  c =  {
+    hue: Math.max(Math.min(color.hue + (r_h * (Math.random() - 0.5)), 360), 0),
+    saturation: Math.max(Math.min(color.saturation + (r_s * (Math.random() - 0.5)), 1), 0),
+    brightness: Math.max(Math.min(color.brightness + (r_b * (Math.random() - 0.5)), 1), 0),
+  }
+  return c
 }
