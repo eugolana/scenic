@@ -2,15 +2,15 @@ var canvas = document.getElementById("myCanvas");
 // canvas.width = window.innerWidth;
 // canvas.height = window.innerHeight;
 
-var height = 740;
+var height = 640;
 var width = 1525;
 // PREPARE canvas
 
 
 
 // cloud vars
-var blocksize = 32;
-var threshold = 0.6;
+var blocksize = 24;
+var threshold = 0.55;
 var cloudFrames = 1;
 // perlin setup
 var seed = Math.random();
@@ -18,13 +18,13 @@ var pn = new Perlin(seed);
 var a = get_perlin(height, width ,blocksize, pn, 0);
 
 // grass vars
-var grass_number = 340;
-var grass_min_height = 100
-var grass_max_height = 350;
+var grass_number = 220;
+var grass_min_height = 50
+var grass_max_height = 250;
 var grass_min_width = 3;
 var grass_max_width = 11;
 var grass_frame_chance = 1;
-var grass_movement = 34;
+var grass_movement = 14;
 
 // flower vars
 flower_growth = 10;
@@ -161,7 +161,6 @@ var Flower = function(target, styleGenes ) {
 Flower.prototype.run = function(target, amount) {
   if (this.growing) {
     this.grow(target, amount)
-    return;
   }
   if (this.budding) {
     this.growBud(amount)
@@ -217,11 +216,12 @@ Flower.prototype.budPetals = function(petals, size, amount) {
   }
   length = template_circle.length/ 2 / petals.children.length;
   for (var i = 0; i < petals.children.length; i++) {
+    r_1 = 0.8 + Math.random() * 0.4;
     petal = petals.children[i];
     target = template_circle.getPointAt((length * (2 * i + 1 )))
     target.selected = true
     vector = target - petal.segments[0].point
-    petal.segments[0].point += vector.normalize(amount)
+    petal.segments[0].point += vector.normalize(amount * r_1)
   }
   return vector.length;
 }
@@ -255,7 +255,7 @@ Flower.prototype.createFlower = function() {
 
   this.flower.addChild(petals);
   // Draw sepals
-  sepals = this.drawPetals(circle_template, this.styleGenes.sepals, 'spikey', false)
+  sepals = this.drawPetals(circle_template, this.styleGenes.sepals, 'rounded', this.styleGenes.sepalBaseWidth, this.styleGenes.sepalTopWidth)
   this.sepals = sepals;
   for (var i = 0; i < sepals.children.length; i++) {
     sepals.children[i].fillColor = randomiseColor(this.styleGenes.sepalColor, 15, 0.2, 0.2)
@@ -281,15 +281,17 @@ Flower.prototype.drawPetals = function(circ, number, type, baseWidth, topWidth) 
     baseWidthOffset = 0
   }
   for (var i = 0; i < number; i++) {
+    r_1 = 0.8 + Math.random() * 0.4
+    r_2 = 0.8 + Math.random() * 0.4
     start = i * length * 2;
     // this is neessary for case where first petal starts at a negative position o the circle
     if (i == 0) {
-      p1 = circ.getPointAt(circ.length - baseWidthOffset - 0.001)
+      p1 = circ.getPointAt(circ.length - baseWidthOffset * r_1)
     } else {
-        p1 = circ.getPointAt(start - baseWidthOffset) ;
+        p1 = circ.getPointAt(start - baseWidthOffset * r_1) ;
     }
     p2 = circ.getPointAt(start + length);
-    p3_temp = (start + (2 * length) + baseWidthOffset)
+    p3_temp = (start + (2 * length) + baseWidthOffset * r_1)
     p3 = circ.getPointAt(p3_temp % circ.length)
     arc = Path.Arc(p1, p2, p3);
     arc.insert(0, this.spine.lastSegment.point.clone());
@@ -297,8 +299,8 @@ Flower.prototype.drawPetals = function(circ, number, type, baseWidth, topWidth) 
     arc.smooth({type: 'catmull-rom'})
     if (type=='rounded') {
       vector = (p1 - p3) * topWidth
-      arc.firstSegment.handleIn =   vector * -1
-      arc.firstSegment.handleOut =  vector
+      arc.firstSegment.handleIn =   vector * -1 * r_2
+      arc.firstSegment.handleOut =  vector * r_2
     }
     petals.addChild(arc);
   }
@@ -350,6 +352,8 @@ var Bug = function(pos, color) {
   rect = new Rectangle(pos, new Size(10, 4));
   circle = new Path.Ellipse(rect)
   circle.fillColor = color;
+  circle.strokeColor = '#222222'
+  circle.strokeWidth = 1;
   stripes = new Group();
   stripes.addChild(new Path.Rectangle(new Rectangle(pos + new Point(2, 0), new Size(2, 4))))
   stripes.addChild(new Path.Rectangle(new Rectangle(pos + new Point(6, 0), new Size(2, 4))))
@@ -363,12 +367,43 @@ var Bug = function(pos, color) {
 
 Bug.prototype.move = function(target, amount) {
   target_traj = (target - this.pos).normalize(1);
-  random_traj = new Point({length: 3, angle: Math.random() * 360})
-  new_traj = (target_traj + random_traj + this.movement).normalize(amount);
+  random_traj = new Point({length: 4, angle: Math.random() * 360})
+  new_traj = (target_traj + random_traj + this.movement * 2).normalize(amount);
   this.bug.rotate(new_traj.angle - this.movement.angle)
   this.pos += new_traj
   this.bug.translate(new_traj)
   this.movement = new_traj
+  if (this.pos.x < 0) {
+    this.pos.x = width;
+    this.bug.translate(new Point(width, 0))
+  }
+  if (this.pos.x > width) {
+    this.pos.x = 0;
+    this.bug.translate(new Point(-width, 0))
+  }
+  if (this.pos.y < 0) {
+    this.pos.y = height;
+    this.bug.translate(new Point(0, height))
+  }
+  if (this.pos.y > height) {
+    this.pos.y = 0;
+    this.bug.translate(new Point(0, - height))
+  }
+
+}
+
+Bug.prototype.findFlowers = function(flowers, mouseFear, mouse) {
+  forces = new Point(0,0);
+  for (var i = 0; i < flowers.length; i++) {
+    v = f[i].spine.lastSegment.point - this.pos;
+    forces += new Point({angle: v.angle, length: 1 / (v.length * v.length)})
+  }
+  if (mouseFear) {
+    v = this.pos - mouse;
+    forces += new Point({angle: v.angle, length:  1/ (v.length * v.length)})
+  }
+
+  return forces.normalize(4);
 }
 
 // INITIALISING STUFF
@@ -392,27 +427,33 @@ for (var i = 0; i < grass_number; i++) {
 f = []
 view.onClick = function(event) {
   size = 1 + Math.random()
+  innerHue = Math.random() * 280;
+  if (80 < innerHue  && innerHue < 160) {
+    innerHue = innerHue + 80
+  }
   styleGenes = {
     stalkColor: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
-    stalkWidth: size * (3 + Math.random() * 2),
+    stalkWidth: size * (1 + Math.random() * 3),
     flowerSize: 20 + Math.random() * 60 * size,
     sepalSize: 10 + Math.random() * 40 * size,
-    innerSize:  20 + size *  20 * Math.random() ,
-    sepals: Math.floor(3 + Math.random() * 3),
+    innerSize:  20 + size *  20 * Math.random(),
+    innerColor:  {hue: innerHue, saturation: 0.6, brightness: 0.7},
+    sepals: Math.floor(4 + Math.random() * 3),
+    sepalBaseWidth:  2 * Math.random(),
+    sepalTopWidth:  2 * Math.random(),
     petals: Math.floor(5 + Math.random() * 12),
     sepalColor: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
     petals: Math.floor(6 + Math.random() * 6),
     petalColor:{hue: Math.random() * 360, saturation: 0.6, brightness: 0.7},
     petalBaseWidth:  2 * Math.random(),
     petalTopWidth:  2 * Math.random(),
-    innerColor: {hue: Math.random() * 360, saturation: 0.6, brightness: 0.7}
   }
   f.push(new Flower( mousePoint, styleGenes))
 }
 
 
 b = []
-for (var i = 0; i < 10; i++) {
+for (var i = 0; i < 24; i++) {
   b.push(new Bug(new Point(width/2, height/2), {hue: 60, saturation: 1, brightness: 0.7}))
 
 }
@@ -437,7 +478,9 @@ function onFrame(event) {
   }
   for (var i = 0; i < b.length; i++) {
     bug = b[i]
-    bug.move(mousePoint, 4)
+    // should eit to prevent it following not-yet born flowers
+    attraction = bug.findFlowers(f, mouseFear = true, mouse= mousePoint);
+    bug.move(bug.pos + attraction  , 4)
     bug.bug.bringToFront();
 
   }
