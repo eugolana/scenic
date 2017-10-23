@@ -350,9 +350,16 @@ var Bug = function(pos, color) {
   rect = new Rectangle(pos, new Size(10, 4));
   circle = new Path.Ellipse(rect)
   circle.fillColor = color;
+  stripes = new Group();
+  stripes.addChild(new Path.Rectangle(new Rectangle(pos + new Point(2, 0), new Size(2, 4))))
+  stripes.addChild(new Path.Rectangle(new Rectangle(pos + new Point(6, 0), new Size(2, 4))))
+  stripes.fillColor = 'black'
   this.bug.addChild(circle)
+  this.bug.addChild(stripes)
   this.movement = new Point(1,0)
 }
+
+
 
 Bug.prototype.move = function(target, amount) {
   target_traj = (target - this.pos).normalize(1);
@@ -404,7 +411,11 @@ view.onClick = function(event) {
 }
 
 
-b = new Bug(new Point(width/2, height/2), {hue: 10, saturation: 1, brightness: 0.7})
+b = []
+for (var i = 0; i < 10; i++) {
+  b.push(new Bug(new Point(width/2, height/2), {hue: 60, saturation: 1, brightness: 0.7}))
+
+}
 
 
 // run loop
@@ -424,7 +435,12 @@ function onFrame(event) {
   for (var i = 0; i < f.length; i++) {
     f[i].run(mousePoint, flower_growth)
   }
-  b.move(mousePoint, 4)
+  for (var i = 0; i < b.length; i++) {
+    bug = b[i]
+    bug.move(mousePoint, 4)
+    bug.bug.bringToFront();
+
+  }
   n += 1;
 }
 
