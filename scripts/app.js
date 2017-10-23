@@ -140,9 +140,14 @@ var Flower = function(target, styleGenes ) {
   this.flowering = false;
   this.flower = false;
   this.time = 0;
-  this.length = 0;
+  this.rotation = 0;
+
   this.spine = new Path([this.base, second_point]);
   this.path = fatten_line(this.spine, this.width, 'point');
+  this.moves = [];
+  for (var i = 0; i < this.spine.length; i++) {
+    this.moves.push( new Point(0,0));
+  }
   this.path.fillColor = this.styleGenes.stalkColor;
   this.path.strokeColor = {
     hue: this.styleGenes.stalkColor.hue,
@@ -164,6 +169,7 @@ Flower.prototype.run = function(target, amount) {
   if (this.flowering) {
     this.growFlower(amount)
   }
+  this.rotate();
 }
 
 Flower.prototype.grow = function(target, amount) {
@@ -176,6 +182,7 @@ Flower.prototype.grow = function(target, amount) {
   var old_direction = (this.spine.lastSegment.point - this.spine.segments[this.spine.segments.length -2].point).normalize(amount * 0.75)
   var new_point = this.spine.lastSegment.point + toTarget.normalize(amount * 0.25) + old_direction;
   this.spine.add(new_point);
+  this.moves.push(new Point(0,0));
   this.updatePath(1);
 }
 
@@ -194,17 +201,20 @@ Flower.prototype.growBud = function(amount) {
 
 Flower.prototype.growFlower = function(amount) {
   v = this.budPetals(this.sepals, this.styleGenes.sepalSize, amount/4);
-  if (v) {
+  console.log(v)
+  if (v <= this.styleGenes.sepalSize * 0.75) {
     this.petals.moveAbove(this.sepals);
     this.flowerInner.moveAbove(this.sepals);
-    this.budPetals(this.petals, this.styleGenes.flowerSize, amount/5);
+    if (this.budPetals(this.petals, this.styleGenes.flowerSize, amount/5) < this.styleGenes.flowerSize * 0.75) {
+      this.flowerInner.moveAbove(this.petals)
+    }
   }
 }
 
 Flower.prototype.budPetals = function(petals, size, amount) {
   template_circle = Path.Circle(this.spine.lastSegment.point, size);
   if (!template_circle.contains(petals.children[0].segments[0].point)) {
-    return true;
+    return 0;
   }
   length = template_circle.length/ 2 / petals.children.length;
   for (var i = 0; i < petals.children.length; i++) {
@@ -214,11 +224,7 @@ Flower.prototype.budPetals = function(petals, size, amount) {
     vector = target - petal.segments[0].point
     petal.segments[0].point += vector.normalize(amount)
   }
-  //
-  // if (vector.length <= 2 * amount) {
-  //   return true;
-  // }
-  return false;
+  return vector.length;
 }
 
 Flower.prototype.createFlower = function() {
@@ -226,8 +232,15 @@ Flower.prototype.createFlower = function() {
   circle_template = new Path.Circle(this.spine.lastSegment.point.clone(), 4);
   this.flowerInner = circle_template;
   circle_template.fillColor = this.styleGenes.innerColor;
+  circle_template.strokeColor = {
+    hue: this.styleGenes.innerColor.hue,
+    saturation: 0.4,
+    brightness: 0.4
+  }
+  circle_template.strokeWidth = 1.5;
   this.flower.addChild(circle_template)
   // draw petals
+  petal_circle = new Path.Circle (this.spine.lastSegment.clone(), 3)
   petals = this.drawPetals(circle_template, this.styleGenes.petals, 'rounded',
         this.styleGenes.petalBaseWidth, this.styleGenes.petalTopWidth)
   this.petals = petals;
@@ -258,37 +271,6 @@ Flower.prototype.createFlower = function() {
 
 }
 
-
-Flower.prototype.sway = function(amount) {
-  this.moves = [];
-  for (var i = 0; i < this.spine.segments.length; i++) {
-    this.moves.push( new Point(0,0) );
-  }
-  for (var i = 1; i < this.moves.length; i++) {
-    // 'collect' sway moving from bottom to top
-    var direction = (this.spine.segments[i-1].point - this.spine.segments[i].point).angle + 90;
-    var sway = (0.5 - Math.random()) * amount;
-    var vector = new Point({length: sway, angle: direction});
-    if (Math.random() > 0.5) {
-      vector *= -1;
-    }
-    for (var ii = i; ii < this.spine.segments.length; ii++) {
-      this.moves[ii] += vector/4;
-      this.moves[ii] *= 4/5;
-    }
-  }
-  for (var i = 0; i < this.moves.length; i++ ) {
-    this.spine.segments[i].point += this.moves[i];
-    this.path.segments[i].point += this.moves[i];
-    if (i != this.moves.length - 1) {
-      this.path.segments[ (this.moves.length * 2) - i - 2].point += this.moves[i];
-      if (this.flower) {
-        console.log(this.flower)
-        // this.flower.translate(this.moves[i])
-      }
-    }
-  }
-}
 
 Flower.prototype.drawPetals = function(circ, number, type, baseWidth, topWidth) {
   length = circ.length/ (number * 2);
@@ -339,6 +321,7 @@ Flower.prototype.updatePath = function(number_of_additions) {
     toRemove = this.spine.segments.length - 3
     this.path.removeSegment(toRemove);
     this.spine.removeSegment(toRemove)
+    this.moves.splice(toRemove, 1);
     this.path.removeSegment(toRemove + 4)
     this.path.smooth({type:'continuous', from: 0, to: toRemove})
     this.path.smooth({type:'continuous', from: toRemove + 3, to: this.path.segments.length-1})
@@ -346,6 +329,19 @@ Flower.prototype.updatePath = function(number_of_additions) {
   }
   // this.path.simplify();
 }
+
+Flower.prototype.rotate = function() {
+  if (this.spine.segments.length >= 6) {
+    rotate = ( 0.15 - Math.random() * 0.3) + (this.rotation / 2);
+    console.log(rotate)
+    this.path.rotate(rotate, this.spine.firstSegment.point)
+    console.log('rotating!')
+    if (this.flower) {
+      this.flower.rotate(rotate, this.spine.firstSegment.point)
+    }
+  }
+}
+
 
 // INITIALISING STUFF
 
@@ -403,8 +399,6 @@ function onFrame(event) {
   }
   for (var i = 0; i < f.length; i++) {
     f[i].run(mousePoint, flower_growth)
-    sway_amount = (Math.random() - 0.5)  * grass_movement / 4;
-    // f[i].sway(sway_amount)
   }
   n += 1;
 }
