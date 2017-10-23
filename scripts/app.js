@@ -124,18 +124,20 @@ var Flower = function(target, styleGenes ) {
   this.target = target;
   // 'styleGenes' is a serialisable object representation of the flower characteristics
   this.styleGenes = styleGenes;
-  this.width = this.styleGenes.width;
+  this.width = this.styleGenes.stalkWidth;
   this.base = new Point(this.target.x, height + 20);
   var second_point = new Point(this.target.x, height);
   this.growing = true;
+  this.budding = false;
   this.flowering = false;
+  this.flower = false;
   this.time = 0;
   this.length = 0;
   this.spine = new Path([this.base, second_point]);
   this.path = fatten_line(this.spine, this.width, 'point');
-  this.path.fillColor = this.styleGenes.color;
+  this.path.fillColor = this.styleGenes.stalkColor;
   this.path.strokeColor = {
-    hue: this.styleGenes.color.hue,
+    hue: this.styleGenes.stalkColor.hue,
     saturation: 0.5,
     brightness: 0.4
   };
@@ -147,8 +149,8 @@ Flower.prototype.run = function(target, amount) {
     this.grow(target, amount)
     return;
   }
-  if (this.flowering) {
-//
+  if (this.budding) {
+    this.growBud(amount)
   }
 }
 
@@ -157,12 +159,47 @@ Flower.prototype.grow = function(target, amount) {
   var toTarget = (target - this.spine.lastSegment.point);
   if (toTarget.length <= 10) {
     this.growing = false;
-    this.flowering = true;
+    this.budding = true;
   }
   var old_direction = (this.spine.lastSegment.point - this.spine.segments[this.spine.segments.length -2].point).normalize(amount * 0.75)
   var new_point = this.spine.lastSegment.point + toTarget.normalize(amount * 0.25) + old_direction;
   this.spine.add(new_point);
   this.updatePath(1);
+}
+
+Flower.prototype.growBud = function(amount) {
+  if (! this.flower) {
+    this.flower = new Group();
+    circle_template = new Path.Circle(this.spine.lastSegment.point, 2);
+    console.log(circle_template)
+    length = circle_template.length/ (this.styleGenes.sepals * 2);
+    console.log(length)
+    sepals = new Group();
+    for (var i = 0; i < this.styleGenes.sepals; i++) {
+      start = i * length * 2;
+      p1 = circle_template.getPointAt(start);
+      p2 = circle_template.getPointAt(start + length);
+      p3 = circle_template.getPointAt(start + (2 * length))
+      arc = Path.Arc(p1, p2, p3);
+      // console.log([p1, p2, p3])
+      console.log(arc)
+      arc.insert(0, this.spine.lastSegment.point);
+      arc.add(this.spine.lastSegment.point);
+      arc.closed = true;
+      sepals.addChild(arc);
+    }
+    this.flower.addChild(sepals)
+    console.log(this.flower);
+    sepals.fillColor = this.styleGenes.sepalColor;
+    sepals.strokeColor = "#114411"
+    // this.flower.selected = true;
+    this.flower.rotate(Math.random() * 180, this.spine.lastSegment.point)
+  }
+  this.flower.scale(1.1, this.spine.lastSegment.point);
+  if (this.flower.bounds.width >= this.styleGenes.flowerSize/2) {
+    this.budding = false;
+    this.flowering = true;
+  }
 }
 
 Flower.prototype.updatePath = function(number_of_additions) {
@@ -173,7 +210,6 @@ Flower.prototype.updatePath = function(number_of_additions) {
   var w = this.width *  (0.9 + Math.random() * 0.2);
   var vector = new Point({angle: angle, length: w});
   p1 = spine_segs[spine_segs.length - 2].point + vector;
-  console.log(p1)
   p2 = spine_segs[spine_segs.length - 2].point - vector;
   this.path.insert(mid_seg, p1);
   this.path.insert(mid_seg + 2, p2);
@@ -192,19 +228,23 @@ for (var i = 0; i < grass_number; i++) {
   g_height = grass_min_height + ( Math.random() * (grass_max_height - grass_min_height));
   g_width = grass_min_width + (Math.random() * (grass_max_width - grass_min_width));
   g_color = {hue: 60 + Math.random() * 20, saturation: 0.6, brightness: 0.8};
-  // console.log("made it this fars");
   grasses.push(new Grass(p, g_height, g_width, g_color, 0.2));
 }
 
 // flowers
-target = new Point(width/2, 0);
-styleGenes = {
-  color: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
-  width: 5
-}
+
 
 f = []
 view.onClick = function(event) {
+  styleGenes = {
+    stalkColor: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
+    stalkWidth: 3 + Math.random() * 4,
+    flowerSize: 20 + Math.random() * 60,
+    sepals: Math.floor(6 + Math.random() * 6),
+    sepalColor: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
+    petals: Math.floor(6 + Math.random() * 6),
+    petal_color:{hue: Math.random() * 180, saturation: 0.6, brightness: 0.7}
+  }
   f.push(new Flower( mousePoint, styleGenes))
 }
 
@@ -224,9 +264,7 @@ function onFrame(event) {
     }
   }
   for (var i = 0; i < f.length; i++) {
-    if (f[i].growing) {
-      f[i].run(mousePoint, 5)
-    }
+    f[i].run(mousePoint, 5)
   }
   n += 1;
 }
