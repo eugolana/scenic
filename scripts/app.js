@@ -5,10 +5,16 @@ var canvas = document.getElementById("myCanvas");
 var height = 740;
 var width = 1525;
 
+// cloud vars
 var blocksize = 32;
 var threshold = 0.6;
 var cloudFrames = 1;
+// perlin setup
+var seed = Math.random();
+var pn = new Perlin(seed);
+var a = get_perlin(height, width ,blocksize, pn, 0);
 
+// grass vars
 var grass_number = 340;
 var grass_min_height = 100
 var grass_max_height = 350;
@@ -17,9 +23,8 @@ var grass_max_width = 11;
 var grass_frame_chance = 1;
 var grass_movement = 34;
 
-var seed = Math.random();
-var pn = new Perlin(seed);
-var a = get_perlin(height, width ,blocksize, pn, 0);
+// flower vars
+flower_growth = 10;
 
 var mousePoint = new Point(width/2, 0)
 onMouseMove = function(event) {
@@ -152,12 +157,15 @@ Flower.prototype.run = function(target, amount) {
   if (this.budding) {
     this.growBud(amount)
   }
+  if (this.flowering) {
+    this.growFlower(amount)
+  }
 }
 
 Flower.prototype.grow = function(target, amount) {
   this.target = target;
   var toTarget = (target - this.spine.lastSegment.point);
-  if (toTarget.length <= 10) {
+  if (toTarget.length <= 30) {
     this.growing = false;
     this.budding = true;
   }
@@ -169,31 +177,9 @@ Flower.prototype.grow = function(target, amount) {
 
 Flower.prototype.growBud = function(amount) {
   if (! this.flower) {
-    this.flower = new Group();
-    circle_template = new Path.Circle(this.spine.lastSegment.point, 2);
-    console.log(circle_template)
-    length = circle_template.length/ (this.styleGenes.sepals * 2);
-    console.log(length)
-    sepals = new Group();
-    for (var i = 0; i < this.styleGenes.sepals; i++) {
-      start = i * length * 2;
-      p1 = circle_template.getPointAt(start);
-      p2 = circle_template.getPointAt(start + length);
-      p3 = circle_template.getPointAt(start + (2 * length))
-      arc = Path.Arc(p1, p2, p3);
-      // console.log([p1, p2, p3])
-      console.log(arc)
-      arc.insert(0, this.spine.lastSegment.point);
-      arc.add(this.spine.lastSegment.point);
-      arc.closed = true;
-      sepals.addChild(arc);
-    }
-    this.flower.addChild(sepals)
-    console.log(this.flower);
-    sepals.fillColor = this.styleGenes.sepalColor;
-    sepals.strokeColor = "#114411"
+    this.createFlower()
     // this.flower.selected = true;
-    this.flower.rotate(Math.random() * 180, this.spine.lastSegment.point)
+    // this.flower.rotate(Math.random() * 180, this.spine.lastSegment.point)
   }
   this.flower.scale(1.1, this.spine.lastSegment.point);
   if (this.flower.bounds.width >= this.styleGenes.flowerSize/2) {
@@ -201,6 +187,77 @@ Flower.prototype.growBud = function(amount) {
     this.flowering = true;
   }
 }
+
+Flower.prototype.growFlower = function(amount) {
+  v = this.budPetals(this.sepals, this.styleGenes.flowerSize * 0.75, amount/4);
+  if (v) {
+    this.petals.moveAbove(this.sepals)
+    this.budPetals(this.petals, this.styleGenes.flowerSize, amount/5);
+  }
+}
+
+Flower.prototype.budPetals = function(petals, size, amount) {
+  template_circle = Path.Circle(this.spine.lastSegment.point, size);
+  length = template_circle.length/ 2 / petals.children.length;
+  for (var i = 0; i < petals.children.length; i++) {
+    petal = petals.children[i];
+    target = template_circle.getPointAt((length * (2 * i + 1 )))
+    target.selected = true
+    vector = target - petal.segments[0].point
+    petal.segments[0].point += vector.normalize(amount)
+  }
+
+  if (vector.length <= 2 * amount) {
+    return true;
+  }
+  return false;
+}
+
+Flower.prototype.createFlower = function() {
+  this.flower = new Group();
+  circle_template = new Path.Circle(this.spine.lastSegment.point, 4);
+  circle_template.fillColor = this.styleGenes.innerColor;
+  this.flower.addChild(circle_template)
+  // draw petals
+  petals = this.drawPetals(circle_template, this.styleGenes.petals)
+  this.petals = petals;
+  this.flower.addChild(petals);
+  petals.fillColor = this.styleGenes.petalColor
+  petals.strokeColor = {
+    hue: this.styleGenes.petalColor,
+    saturation: 0.4,
+    brightness: 0.4
+  }
+  // Draw sepals
+  sepals = this.drawPetals(circle_template, this.styleGenes.sepals)
+  this.sepals = sepals;
+  this.flower.addChild(sepals);
+  sepals.fillColor = this.styleGenes.sepalColor;
+  sepals.strokeColor = "#114411"
+
+
+  //  draw petals
+
+
+}
+
+Flower.prototype.drawPetals = function(circ, number) {
+  length = circ.length/ (number * 2);
+  petals = new Group();
+
+  for (var i = 0; i < number; i++) {
+    start = i * length * 2;
+    p1 = circ.getPointAt(start);
+    p2 = circ.getPointAt(start + length);
+    p3 = circ.getPointAt(start + (2 * length) - 0.1)
+    arc = Path.Arc(p1, p2, p3);
+    arc.insert(0, this.spine.lastSegment.point);
+    arc.closed = true;
+    arc.smooth({type: 'catmull-rom'})
+    petals.addChild(arc);
+  }
+  return petals
+  }
 
 Flower.prototype.updatePath = function(number_of_additions) {
   var mid_seg = Math.floor(this.path.segments.length/2);
@@ -240,10 +297,12 @@ view.onClick = function(event) {
     stalkColor: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
     stalkWidth: 3 + Math.random() * 4,
     flowerSize: 20 + Math.random() * 60,
-    sepals: Math.floor(6 + Math.random() * 6),
+    sepals: Math.floor(3 + Math.random() * 3),
+    petals: Math.floor(5 + Math.random() * 6),
     sepalColor: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
     petals: Math.floor(6 + Math.random() * 6),
-    petal_color:{hue: Math.random() * 180, saturation: 0.6, brightness: 0.7}
+    petalColor:{hue: Math.random() * 360, saturation: 0.6, brightness: 0.7},
+    innerColor: {hue: Math.random() * 360, saturation: 0.6, brightness: 0.7}
   }
   f.push(new Flower( mousePoint, styleGenes))
 }
@@ -264,7 +323,7 @@ function onFrame(event) {
     }
   }
   for (var i = 0; i < f.length; i++) {
-    f[i].run(mousePoint, 5)
+    f[i].run(mousePoint, flower_growth)
   }
   n += 1;
 }
