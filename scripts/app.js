@@ -4,6 +4,9 @@ var canvas = document.getElementById("myCanvas");
 
 var height = 740;
 var width = 1525;
+// PREPARE canvas
+
+
 
 // cloud vars
 var blocksize = 32;
@@ -182,14 +185,14 @@ Flower.prototype.growBud = function(amount) {
     // this.flower.rotate(Math.random() * 180, this.spine.lastSegment.point)
   }
   this.flower.scale(1.1, this.spine.lastSegment.point);
-  if (this.flower.bounds.width >= this.styleGenes.flowerSize/2) {
+  if (this.flower.bounds.width >= this.styleGenes.innerSize) {
     this.budding = false;
     this.flowering = true;
   }
 }
 
 Flower.prototype.growFlower = function(amount) {
-  v = this.budPetals(this.sepals, this.styleGenes.flowerSize * 0.75, amount/4);
+  v = this.budPetals(this.sepals, this.styleGenes.sepalSize, amount/4);
   if (v) {
     this.petals.moveAbove(this.sepals);
     this.flowerInner.moveAbove(this.sepals);
@@ -219,12 +222,13 @@ Flower.prototype.budPetals = function(petals, size, amount) {
 
 Flower.prototype.createFlower = function() {
   this.flower = new Group();
-  circle_template = new Path.Circle(this.spine.lastSegment.point, 4);
+  circle_template = new Path.Circle(this.spine.lastSegment.point.clone(), 4);
   this.flowerInner = circle_template;
   circle_template.fillColor = this.styleGenes.innerColor;
   this.flower.addChild(circle_template)
   // draw petals
-  petals = this.drawPetals(circle_template, this.styleGenes.petals, 'rounded')
+  petals = this.drawPetals(circle_template, this.styleGenes.petals, 'rounded',
+        this.styleGenes.petalBaseWidth, this.styleGenes.petalTopWidth)
   this.petals = petals;
   // round petals
   for (var i = 0; i < petals.children.length; i++) {
@@ -235,9 +239,10 @@ Flower.prototype.createFlower = function() {
     saturation: 0.4,
     brightness: 0.4
   }
+
   this.flower.addChild(petals);
   // Draw sepals
-  sepals = this.drawPetals(circle_template, this.styleGenes.sepals, 'spikey')
+  sepals = this.drawPetals(circle_template, this.styleGenes.sepals, 'spikey', false)
   this.sepals = sepals;
   for (var i = 0; i < sepals.children.length; i++) {
     sepals.children[i].fillColor = randomiseColor(this.styleGenes.sepalColor, 15, 0.2, 0.2)
@@ -248,29 +253,68 @@ Flower.prototype.createFlower = function() {
     brightness: 0.4
   }
   this.flower.addChild(sepals);
-
-
-  //  draw petals
-
+  this.flower.strokeWidth = 1.5;
 
 }
 
-Flower.prototype.drawPetals = function(circ, number, type) {
+
+Flower.prototype.sway = function(amount) {
+  this.moves = [];
+  for (var i = 0; i < this.spine.segments.length; i++) {
+    this.moves.push( new Point(0,0) );
+  }
+  for (var i = 1; i < this.moves.length; i++) {
+    // 'collect' sway moving from bottom to top
+    var direction = (this.spine.segments[i-1].point - this.spine.segments[i].point).angle + 90;
+    var sway = (0.5 - Math.random()) * amount;
+    var vector = new Point({length: sway, angle: direction});
+    if (Math.random() > 0.5) {
+      vector *= -1;
+    }
+    for (var ii = i; ii < this.spine.segments.length; ii++) {
+      this.moves[ii] += vector/4;
+      this.moves[ii] *= 4/5;
+    }
+  }
+  for (var i = 0; i < this.moves.length; i++ ) {
+    this.spine.segments[i].point += this.moves[i];
+    this.path.segments[i].point += this.moves[i];
+    if (i != this.moves.length - 1) {
+      this.path.segments[ (this.moves.length * 2) - i - 2].point += this.moves[i];
+      if (this.flower) {
+        console.log(this.flower)
+        // this.flower.translate(this.moves[i])
+      }
+    }
+  }
+}
+
+Flower.prototype.drawPetals = function(circ, number, type, baseWidth, topWidth) {
   length = circ.length/ (number * 2);
   circ_radius = circ.bounds.width;
   petals = new Group();
-
+  if (baseWidth) {
+    baseWidthOffset = (2 * length) - baseWidth
+  } else {
+    baseWidthOffset = 0
+  }
   for (var i = 0; i < number; i++) {
     start = i * length * 2;
-    p1 = circ.getPointAt(start);
+    // this is neessary for case where first petal starts at a negative position o the circle
+    if (i == 0) {
+      p1 = circ.getPointAt(circ.length - baseWidthOffset - 0.001)
+    } else {
+        p1 = circ.getPointAt(start - baseWidthOffset) ;
+    }
     p2 = circ.getPointAt(start + length);
-    p3 = circ.getPointAt(start + (2 * length) - 0.1)
+    p3_temp = (start + (2 * length) + baseWidthOffset)
+    p3 = circ.getPointAt(p3_temp % circ.length)
     arc = Path.Arc(p1, p2, p3);
-    arc.insert(0, this.spine.lastSegment.point);
+    arc.insert(0, this.spine.lastSegment.point.clone());
     arc.closed = true;
     arc.smooth({type: 'catmull-rom'})
     if (type=='rounded') {
-      vector = (p1 - p3)
+      vector = (p1 - p3) * topWidth
       arc.firstSegment.handleIn =   vector * -1
       arc.firstSegment.handleOut =  vector
     }
@@ -313,15 +357,20 @@ for (var i = 0; i < grass_number; i++) {
 
 f = []
 view.onClick = function(event) {
+  size = 1 + Math.random()
   styleGenes = {
     stalkColor: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
-    stalkWidth: 3 + Math.random() * 4,
-    flowerSize: 20 + Math.random() * 60,
+    stalkWidth: size * (3 + Math.random() * 2),
+    flowerSize: 20 + Math.random() * 60 * size,
+    sepalSize: 10 + Math.random() * 40 * size,
+    innerSize:  20 + size *  20 * Math.random() ,
     sepals: Math.floor(3 + Math.random() * 3),
     petals: Math.floor(5 + Math.random() * 6),
     sepalColor: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
     petals: Math.floor(6 + Math.random() * 6),
     petalColor:{hue: Math.random() * 360, saturation: 0.6, brightness: 0.7},
+    petalBaseWidth:  2 * Math.random(),
+    petalTopWidth:  2 * Math.random(),
     innerColor: {hue: Math.random() * 360, saturation: 0.6, brightness: 0.7}
   }
   f.push(new Flower( mousePoint, styleGenes))
@@ -344,6 +393,8 @@ function onFrame(event) {
   }
   for (var i = 0; i < f.length; i++) {
     f[i].run(mousePoint, flower_growth)
+    sway_amount = (Math.random() - 0.5)  * grass_movement / 4;
+    // f[i].sway(sway_amount)
   }
   n += 1;
 }
