@@ -149,6 +149,7 @@ var Flower = function(target, styleGenes ) {
     saturation: 0.5,
     brightness: 0.4
   };
+  this.path.strokeWidth = 1.5
 
 }
 
@@ -328,12 +329,21 @@ Flower.prototype.updatePath = function(number_of_additions) {
   var spine_segs = this.spine.segments;
   this.path.segments[mid_seg] = this.spine.lastSegment;
   var angle = (spine_segs[spine_segs.length - 1].point - spine_segs[spine_segs.length - 2].point).angle + 90;
-  var w = this.width *  (0.9 + Math.random() * 0.2);
+  var w = this.width  *  (0.95 + Math.random() * 0.1);
   var vector = new Point({angle: angle, length: w});
   p1 = spine_segs[spine_segs.length - 2].point + vector;
   p2 = spine_segs[spine_segs.length - 2].point - vector;
   this.path.insert(mid_seg, p1);
   this.path.insert(mid_seg + 2, p2);
+  if (this.path.segments.length > 7 && Math.random() > 0.6) {
+    toRemove = this.spine.segments.length - 3
+    this.path.removeSegment(toRemove);
+    this.spine.removeSegment(toRemove)
+    this.path.removeSegment(toRemove + 4)
+    this.path.smooth({type:'continuous', from: 0, to: toRemove})
+    this.path.smooth({type:'continuous', from: toRemove + 3, to: this.path.segments.length-1})
+
+  }
   // this.path.simplify();
 }
 
@@ -365,7 +375,7 @@ view.onClick = function(event) {
     sepalSize: 10 + Math.random() * 40 * size,
     innerSize:  20 + size *  20 * Math.random() ,
     sepals: Math.floor(3 + Math.random() * 3),
-    petals: Math.floor(5 + Math.random() * 6),
+    petals: Math.floor(5 + Math.random() * 12),
     sepalColor: {hue: 80 + Math.random() * 20, saturation: 0.5, brightness: 0.6},
     petals: Math.floor(6 + Math.random() * 6),
     petalColor:{hue: Math.random() * 360, saturation: 0.6, brightness: 0.7},
