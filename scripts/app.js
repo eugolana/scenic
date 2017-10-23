@@ -201,7 +201,6 @@ Flower.prototype.growBud = function(amount) {
 
 Flower.prototype.growFlower = function(amount) {
   v = this.budPetals(this.sepals, this.styleGenes.sepalSize, amount/4);
-  console.log(v)
   if (v <= this.styleGenes.sepalSize * 0.75) {
     this.petals.moveAbove(this.sepals);
     this.flowerInner.moveAbove(this.sepals);
@@ -333,15 +332,37 @@ Flower.prototype.updatePath = function(number_of_additions) {
 Flower.prototype.rotate = function() {
   if (this.spine.segments.length >= 6) {
     rotate = ( 0.15 - Math.random() * 0.3) + (this.rotation / 2);
-    console.log(rotate)
     this.path.rotate(rotate, this.spine.firstSegment.point)
-    console.log('rotating!')
     if (this.flower) {
       this.flower.rotate(rotate, this.spine.firstSegment.point)
     }
   }
 }
 
+
+
+// Bugs
+
+var Bug = function(pos, color) {
+  this.pos = pos;
+  this.color = color;
+  this.bug = new Group();
+  rect = new Rectangle(pos, new Size(10, 4));
+  circle = new Path.Ellipse(rect)
+  circle.fillColor = color;
+  this.bug.addChild(circle)
+  this.movement = new Point(1,0)
+}
+
+Bug.prototype.move = function(target, amount) {
+  target_traj = (target - this.pos).normalize(1);
+  random_traj = new Point({length: 3, angle: Math.random() * 360})
+  new_traj = (target_traj + random_traj + this.movement).normalize(amount);
+  this.bug.rotate(new_traj.angle - this.movement.angle)
+  this.pos += new_traj
+  this.bug.translate(new_traj)
+  this.movement = new_traj
+}
 
 // INITIALISING STUFF
 
@@ -383,6 +404,9 @@ view.onClick = function(event) {
 }
 
 
+b = new Bug(new Point(width/2, height/2), {hue: 10, saturation: 1, brightness: 0.7})
+
+
 // run loop
 n = 0;
 function onFrame(event) {
@@ -400,6 +424,7 @@ function onFrame(event) {
   for (var i = 0; i < f.length; i++) {
     f[i].run(mousePoint, flower_growth)
   }
+  b.move(mousePoint, 4)
   n += 1;
 }
 
