@@ -27,7 +27,7 @@ var a = get_perlin(height, width ,blocksize, pn, 0);
 // grass vars
 var grass_number = width / 10;
 var grass_min_height = height / 10
-var grass_max_height = height/3;
+var grass_max_height = height/2;
 var grass_min_width = 3;
 var grass_max_width = 11;
 var grass_frame_chance = 1;
