@@ -18,11 +18,12 @@ html, body {
 
 #content {
 	background-color: rgba(16,16,16,0.5);
-	border: 1px solid black;
+	border: 2px solid black;
+	border-radius: 2px;
 	padding: 15px;
 	opacity: 0.5;
   width: 50%;
-	height: 200px;
+	height: auto;
 	display: block;
 	position: relative;
   margin-left: auto ;
