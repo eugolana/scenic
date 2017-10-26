@@ -17,7 +17,7 @@ html, body {
     position: fixed;
 }
 
-#aboutDiv, #menu {
+#aboutDiv, #menu, #githubLink {
 	background-color: rgba(192,192,192,0.8);
 	border: 1px solid #222222;
 	border-radius: 2px;
@@ -71,12 +71,9 @@ html, body {
 
 #menuItems li a {
 	color: black;
-	/*background-color: rgba(16,16,16,0.5);*/
 	display: block;
 	width: 80px;
-	/*border: 2px solid black;*/
 	text-align: center;
-	/*padding: 14px; 16px;*/
 	pointer-events: all;
 }
 
@@ -88,7 +85,7 @@ html, body {
 	display: block;
 	float: right;
 	margin: 0px 5px;
-	pointer-events:all ;
+	pointer-events: all;
 	cursor: pointer;
 }
 
@@ -98,4 +95,26 @@ html, body {
 
 #minimise p {
 	margin: 0px;
+}
+
+#githubLink {
+	margin-right: 5px;
+	margin-left: auto;
+	width: 100px;
+	position: fixed;
+	bottom: 5px;
+	right: 5px;
+	padding: 0;
+}
+
+#githubLink a{
+	font-size: 80%;
+	display: block;
+	text-align: center;
+	color: #222222;
+	margin: 0;
+	pointer-events: all;
+}
+#githubLink a:hover {
+	color: #DDDDDD;
 }
