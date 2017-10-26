@@ -40,6 +40,7 @@ html, body {
 	width: 320px;
 	height: auto;
 	padding: 2px 0;
+	padding-bottom: 20px;
 }
 
 #aboutDiv {
@@ -59,7 +60,8 @@ html, body {
 	display: inline;
 	margin: 0;
 	list-style: none;
-	padding-left: auto;
+	padding-left: 0;
+	/*height: 20px;*/
 	/*padding: 0;*/
 }
 
